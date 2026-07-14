@@ -5,3 +5,5 @@ __pycache__/
 dist/
 build/
 *.egg-info/
+scripts/pypi-placeholder/dist/
+dist_real/

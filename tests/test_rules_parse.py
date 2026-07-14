@@ -64,6 +64,78 @@ class TestRuleShapeFilter(unittest.TestCase):
         texts = self._parse_lines("## H\n\n- TODO Items\n- Always verify the build first.\n")
         self.assertNotIn("TODO Items", texts)
 
+    def test_definition_label_bullet_dropped(self):
+        # `- **Approve**: No CRITICAL...` is a label->value pair, not a directive.
+        body = (
+            "## Approval Criteria\n\n"
+            "- **Approve**: No CRITICAL or HIGH issues\n"
+            "- **Warning**: Only HIGH issues (merge with caution)\n"
+            "- **Block**: CRITICAL issues found\n"
+            "- Always run the full test suite before approving.\n"
+        )
+        texts = self._parse_lines(body)
+        self.assertNotIn("Approve: No CRITICAL or HIGH issues", texts)
+        self.assertNotIn("Warning: Only HIGH issues (merge with caution)", texts)
+        self.assertNotIn("Block: CRITICAL issues found", texts)
+        # The genuine directive on the same list survives.
+        self.assertTrue(any("run the full test suite" in t for t in texts))
+
+    def test_glossary_dash_description_dropped(self):
+        # `- `common/` — language-agnostic principles` is a legend entry.
+        body = (
+            "## Layout\n\n"
+            "- `common/` — language-agnostic principles (always applied)\n"
+            "- `<language>/` — language-specific extensions of common/\n"
+            "- Always keep rules under 400 lines.\n"
+        )
+        texts = self._parse_lines(body)
+        self.assertFalse(any("language-agnostic principles" in t for t in texts))
+        self.assertFalse(any("language-specific extensions" in t for t in texts))
+        self.assertTrue(any("under 400 lines" in t for t in texts))
+
+    def test_numbered_procedure_substeps_dropped(self):
+        # Steps inside a numbered how-to are procedure narration, not standalone
+        # rules to grade an agent against.
+        body = (
+            "## TDD workflow\n\n"
+            "MANDATORY workflow:\n"
+            "1. Write test first (RED)\n"
+            "2. Run test - it should FAIL\n"
+            "3. Write minimal implementation (GREEN)\n"
+            "4. Run test - it should PASS\n"
+        )
+        texts = self._parse_lines(body)
+        self.assertNotIn("Run test - it should FAIL", texts)
+        self.assertNotIn("Run test - it should PASS", texts)
+        self.assertNotIn("Write minimal implementation (GREEN)", texts)
+
+    def test_security_response_substeps_dropped(self):
+        body = (
+            "## Security Response Protocol\n\n"
+            "If security issue found:\n"
+            "1. STOP immediately\n"
+            "2. Fix incrementally\n"
+            "3. Rotate any exposed secrets\n"
+        )
+        texts = self._parse_lines(body)
+        self.assertNotIn("STOP immediately", texts)
+        self.assertNotIn("Fix incrementally", texts)
+
+    def test_real_imperative_bullets_still_kept(self):
+        # Guard against over-tightening: ordinary rules must survive.
+        body = (
+            "## Rules\n\n"
+            "- Never use the --force flag when pushing to a shared branch.\n"
+            "- Always run tests before committing.\n"
+            "- Use conventional commit messages.\n"
+            "1. Never hardcode secrets in source code.\n"
+        )
+        texts = self._parse_lines(body)
+        self.assertTrue(any("--force flag" in t for t in texts))
+        self.assertTrue(any("run tests before committing" in t for t in texts))
+        self.assertTrue(any("conventional commit messages" in t for t in texts))
+        self.assertTrue(any("hardcode secrets" in t for t in texts))
+
 
 if __name__ == "__main__":
     unittest.main()

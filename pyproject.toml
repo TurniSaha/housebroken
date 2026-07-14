@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "housebroken"
-version = "0.1.0"
+version = "0.1.1"
 description = "Grade your AI agent against your own CLAUDE.md, with receipts."
 readme = "README.md"
 requires-python = ">=3.11"
